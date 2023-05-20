@@ -1,0 +1,4 @@
+data/
+.venv
+description/paper.pdf
+*__pycache__
