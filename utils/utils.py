@@ -47,7 +47,7 @@ class TacotronPreprocessor:
         text = re.sub('[^А-я \!\?\.\,\-]+', '', text)
         temp_res = []
         for letter in text:
-            index = np.where(self.vocab == letter)[0][0]
+            index = np.where(self.vocab == letter)[0][0] + 1
             temp_res.append(index)
         return temp_res
 
@@ -61,7 +61,7 @@ class TacotronPreprocessor:
     
 
 class TTSDataset(Dataset):
-    def __init__(self, data_path='../data/RUSLAN_text/metadata_RUSLAN_16269.csv', num_elements=None):
+    def __init__(self, data_path='data/RUSLAN_text/metadata_RUSLAN_16269.csv', num_elements=None):
         super().__init__()
         self.data_path = data_path
         self.dataset = pd.read_csv(data_path, sep='|', header=None)
@@ -79,7 +79,7 @@ class TTSDataset(Dataset):
 
     def __getitem__(self, item):
         temp_row = self.dataset.iloc[item]
-        path = '../data/RUSLAN/'+temp_row.path+'.wav'
+        path = 'data/RUSLAN/'+temp_row.path+'.wav'
         text = temp_row.text
         text_norm = self.preprocessor.transform_single_text(text)
         text_norm = torch.tensor(text_norm)
@@ -94,7 +94,7 @@ def collate_fn(data):
     max_text_length = max([x.shape[0] for x in texts])
     max_mel_length = max([x.shape[1] for x in mels]) + 1
 
-    new_texts = torch.zeros(len(texts), max_text_length) - 1
+    new_texts = torch.zeros(len(texts), max_text_length) 
     for i in range(len(texts)):
         temp_text = texts[i]
         curr_text_length = temp_text.shape[0]
