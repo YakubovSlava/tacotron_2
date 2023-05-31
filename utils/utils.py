@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 from torchaudio import transforms
 from torchaudio.functional import preemphasis
 import hyperparams as hps
+import matplotlib.pyplot as plt
 
 
 class TacotronPreprocessor:
@@ -92,6 +93,8 @@ class TTSDataset(Dataset):
 def collate_fn(data):
     texts, mels = zip(*data)
     max_text_length = max([x.shape[0] for x in texts])
+    text_mask_idx = [x.shape[0] for x in texts]
+
     max_mel_length = max([x.shape[1] for x in mels]) + 1
 
     new_texts = torch.zeros(len(texts), max_text_length) 
@@ -109,12 +112,14 @@ def collate_fn(data):
         stops[i][temp_audio_length+1:] = 1
     
     new_mels = torch.clip(new_mels, hps.CLIPMIN)
-    return new_texts.long(), torch.log(new_mels), stops
+    
+    return new_texts.long(), torch.log(new_mels), stops, text_mask_idx
 
 
 
 # ONLY FOR CUDA USAGE
 def reconstruct_audio(mel, stops):
+    stops[-1] = 1
     stop = (stops==1).int().argmax()
     mel = torch.exp(mel[:, :stop])
     print('entered')
@@ -122,7 +127,36 @@ def reconstruct_audio(mel, stops):
                                                             sample_rate=hps.SAMPLE_RATE, f_min=hps.FMIN, f_max=hps.FMAX, mel_scale='slaney').cuda()
     spectrogram = inverse_melscale_transform(mel.cuda())
     print('inversed')
-    transform = transforms.GriffinLim(n_fft=hps.N_FFT, win_length=hps.WINLEN, hop_length=hps.HOPLEN).cuda()
+    transform = transforms.GriffinLim(n_fft=hps.N_FFT, win_length=hps.WINLEN, hop_length=hps.HOPLEN, n_iter=30).cuda()
     waveform = transform(spectrogram).detach().cpu()
     print('transformed')
     return waveform
+
+
+### Copied from NVIDIA repo
+def save_figure_to_numpy(fig):
+    # save it to a numpy array.
+    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    return data
+
+
+def plot_alignment_to_numpy(alignment, info=None):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    im = ax.imshow(alignment, aspect='auto', origin='lower',
+                   interpolation='none')
+    fig.colorbar(im, ax=ax)
+    xlabel = 'Decoder timestep'
+    if info is not None:
+        xlabel += '\n\n' + info
+    plt.xlabel(xlabel)
+    plt.ylabel('Encoder timestep')
+    plt.tight_layout()
+
+    fig.canvas.draw()
+    data = save_figure_to_numpy(fig)
+    plt.close()
+    return data
+
+
+

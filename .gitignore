@@ -2,3 +2,9 @@ data/
 .venv
 description/paper.pdf
 *__pycache__
+model_saves/
+runs/
+utils/hyperparams.py
+utils/mel_to_audio_example.ipynb
+utils/utils.py
+*.pt
