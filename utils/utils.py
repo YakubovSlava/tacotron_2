@@ -111,9 +111,9 @@ def collate_fn(data):
         new_mels[i][:, 1:temp_audio_length+1] = temp_mel
         stops[i][temp_audio_length+1:] = 1
     
-    new_mels = torch.clip(new_mels, hps.CLIPMIN)
+    new_mels = torch.clip((new_mels), hps.CLIPMIN)
     
-    return new_texts.long(), torch.log(new_mels), stops, text_mask_idx
+    return new_texts.long(), torch.log(new_mels), stops, torch.tensor(text_mask_idx)
 
 
 
@@ -121,42 +121,15 @@ def collate_fn(data):
 def reconstruct_audio(mel, stops):
     stops[-1] = 1
     stop = (stops==1).int().argmax()
-    mel = torch.exp(mel[:, :stop])
+    mel = (torch.exp(mel[:, :stop]))
     print('entered')
     inverse_melscale_transform = transforms.InverseMelScale(n_stft=hps.N_FFT // 2 + 1, n_mels = hps.N_MEL_FILTERBANKS, 
                                                             sample_rate=hps.SAMPLE_RATE, f_min=hps.FMIN, f_max=hps.FMAX, mel_scale='slaney').cuda()
     spectrogram = inverse_melscale_transform(mel.cuda())
     print('inversed')
     transform = transforms.GriffinLim(n_fft=hps.N_FFT, win_length=hps.WINLEN, hop_length=hps.HOPLEN, n_iter=30).cuda()
-    waveform = transform(spectrogram).detach().cpu()
+    waveform = transform(spectrogram).detach().cpu() * hps.WAV_MAX
     print('transformed')
     return waveform
-
-
-### Copied from NVIDIA repo
-def save_figure_to_numpy(fig):
-    # save it to a numpy array.
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    return data
-
-
-def plot_alignment_to_numpy(alignment, info=None):
-    fig, ax = plt.subplots(figsize=(6, 4))
-    im = ax.imshow(alignment, aspect='auto', origin='lower',
-                   interpolation='none')
-    fig.colorbar(im, ax=ax)
-    xlabel = 'Decoder timestep'
-    if info is not None:
-        xlabel += '\n\n' + info
-    plt.xlabel(xlabel)
-    plt.ylabel('Encoder timestep')
-    plt.tight_layout()
-
-    fig.canvas.draw()
-    data = save_figure_to_numpy(fig)
-    plt.close()
-    return data
-
 
 

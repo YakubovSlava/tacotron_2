@@ -1,4 +1,4 @@
-from utils.utils import TacotronPreprocessor, TTSDataset, collate_fn, reconstruct_audio, plot_alignment_to_numpy
+from utils.utils import TacotronPreprocessor, TTSDataset, collate_fn, reconstruct_audio
 import pandas as pd
 import numpy as np
 import re

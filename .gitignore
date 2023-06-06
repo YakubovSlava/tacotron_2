@@ -3,7 +3,10 @@ data/
 description/paper.pdf
 *__pycache__
 model_saves/
+model_saves_clip/
 runs/
+runs_save/
+clipped/
 utils/hyperparams.py
 utils/mel_to_audio_example.ipynb
 utils/utils.py
